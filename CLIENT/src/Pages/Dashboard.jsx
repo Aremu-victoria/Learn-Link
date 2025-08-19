@@ -17,7 +17,7 @@ const navigate = useNavigate();
 useEffect(() => {
   const fetchData = async () => {
     try {
-      const verifyResponse = await axios.get("https://learn-link-wvil.onrender.com/verify", {
+      const verifyResponse = await axios.get("https://learn-link-1.onrender.com/verify", {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",

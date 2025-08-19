@@ -15,7 +15,7 @@ const Register = () => {
       e.preventDefault();
       const allValues = { name, email, password };
       // const url = 'http://localhost:4000/signup';
-      const url = 'https://learn-link-wvil.onrender.com/signup';
+      const url = 'https://learn-link-1.onrender.com/signup';
       axios
           .post(url, allValues)
           .then((res) => {

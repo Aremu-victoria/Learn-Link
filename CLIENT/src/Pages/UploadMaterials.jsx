@@ -41,7 +41,7 @@ const UploadMaterials = () => {
 
     try {
       const res = await axios.post(
-        'https://learn-link-wvil.onrender.com/upload-material',
+        'https://learn-link-1.onrender.com/upload-material',
         formData,
         {
           headers: {
