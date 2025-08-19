@@ -11,7 +11,7 @@ const ViewMaterial = () => {
   const [loading, setLoading] = useState(true);
 
   // Base URL: adjust to your deployment or local server
-  const BASE_URL = 'https://newfinalproject-5.onrender.com';
+  const BASE_URL = 'https://learn-link-wvil.onrender.com';
 
   useEffect(() => {
     axios.get(`${BASE_URL}/materials`)
