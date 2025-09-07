@@ -151,14 +151,22 @@ app.post('/upload-material', upload.single('file'), async (req, res) => {
     return res.status(400).json({ message: 'No file uploaded' });
   }
 
-  const fileUrl = `/uploads/${req.file.filename}`;
+  // Verify user authentication
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
 
   try {
+    const decoded = jwt.verify(token, secret);
+    const fileUrl = `/uploads/${req.file.filename}`;
+
     const newMaterial = new Material({
       title,
       subject,
       description,
-      fileUrl
+      fileUrl,
+      userId: decoded.id
     });
     await newMaterial.save();
     res.status(200).json({
@@ -169,6 +177,9 @@ app.post('/upload-material', upload.single('file'), async (req, res) => {
       description,
     });
   } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
     console.error(error);
     res.status(500).json({ message: 'Error uploading material' });
   }
@@ -185,7 +196,7 @@ app.get('/materials', async (req, res) => {
   }
 });
 
-// Dashboard route (example)
+// Dashboard route
 app.get('/dashboard', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
@@ -193,14 +204,61 @@ app.get('/dashboard', async (req, res) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    jwt.verify(token, secret, async (err) => {
+    jwt.verify(token, secret, async (err, decoded) => {
       if (err) {
         return res.status(401).json({ message: 'Token expired or invalid' });
       }
 
       try {
-        const materials = await Material.find();
-        res.status(200).json({ materials });
+        const userId = decoded.id;
+        
+        // Get user info
+        const user = await accounts.findById(userId);
+        if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Get user's materials
+        const userMaterials = await Material.find({ userId }).sort({ uploadDate: -1 });
+        
+        // Calculate statistics
+        const totalMaterials = userMaterials.length;
+        
+        // Calculate materials uploaded this week
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        const materialsThisWeek = userMaterials.filter(material => 
+          new Date(material.uploadDate) >= oneWeekAgo
+        ).length;
+
+        // Get all materials for total downloads (assuming each view is a download)
+        const allMaterials = await Material.find();
+        const totalDownloads = allMaterials.length; // This could be enhanced with actual download tracking
+
+        // Get active students (users who have uploaded materials in the last 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const activeUsers = await Material.distinct('userId', {
+          uploadDate: { $gte: thirtyDaysAgo }
+        });
+        const activeStudents = activeUsers.length;
+
+        const dashboardData = {
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email
+          },
+          statistics: {
+            materialsUploaded: totalMaterials,
+            newThisWeek: materialsThisWeek,
+            totalDownloads: totalDownloads,
+            activeStudents: activeStudents
+          },
+          materials: userMaterials
+        };
+
+        res.status(200).json(dashboardData);
       } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error fetching dashboard' });

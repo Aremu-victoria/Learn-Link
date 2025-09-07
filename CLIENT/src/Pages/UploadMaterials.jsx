@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Row, Col, Nav } from 'react-bootstrap';
 import { FaBell, FaUpload, FaHome, FaUser, FaSignOutAlt, FaFolderOpen } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import DashBoardFooter from '../Components/DashBoardFooter';
 import axios from 'axios';
 
@@ -14,7 +14,10 @@ const UploadMaterials = () => {
   });
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState('');
+  const [user, setUser] = useState(null);
   const fileInputRef = useRef(null);
+  const token = localStorage.getItem("token");
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -23,6 +26,32 @@ const UploadMaterials = () => {
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!token) {
+        navigate("/signin");
+        return;
+      }
+      
+      try {
+        const response = await axios.get("https://learn-link-1.onrender.com/verify", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        setUser(response.data.user);
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          localStorage.removeItem("token");
+          navigate("/signin");
+        }
+      }
+    };
+
+    fetchUser();
+  }, [token, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,13 +70,12 @@ const UploadMaterials = () => {
 
     try {
       const res = await axios.post(
-        'https://learn-link-1.onrender.com/upload-material',
+        'http://localhost:4000/upload-material',
         formData,
         {
           headers: {
             'Content-Type': 'multipart/form-data',
-            // If you need authentication, add your token here:
-            // 'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         }
       );
@@ -84,7 +112,7 @@ const UploadMaterials = () => {
         <Col md={10} className="bg-light">
           <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-white">
             <div>
-              <strong>Welcome back, Alex Kim!</strong>
+              <strong>Welcome back, {user?.name || 'User'}!</strong>
             </div>
             <div>
               <FaBell className="me-2" />

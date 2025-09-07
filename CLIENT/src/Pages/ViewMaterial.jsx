@@ -2,25 +2,53 @@ import React, { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Row, Col, Card, Button, Nav, Form } from 'react-bootstrap';
 import { FaBell, FaUpload, FaHome, FaUser, FaSignOutAlt, FaFolderOpen, FaEye, FaDownload } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import DashBoardFooter from '../Components/DashBoardFooter';
 import axios from 'axios';
 
 const ViewMaterial = () => {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const token = localStorage.getItem("token");
+  const navigate = useNavigate();
 
   // Base URL: adjust to your deployment or local server
   const BASE_URL = 'https://learn-link-1.onrender.com';
 
   useEffect(() => {
-    axios.get(`${BASE_URL}/materials`)
-      .then(res => {
-        setMaterials(res.data);
+    const fetchData = async () => {
+      if (!token) {
+        navigate("/signin");
+        return;
+      }
+
+      try {
+        // Fetch user data
+        const userResponse = await axios.get("https://learn-link-1.onrender.com/verify", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        setUser(userResponse.data.user);
+
+        // Fetch materials
+        const materialsResponse = await axios.get(`${BASE_URL}/materials`);
+        setMaterials(materialsResponse.data);
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          localStorage.removeItem("token");
+          navigate("/signin");
+        } else {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchData();
+  }, [token, navigate]);
 
   return (
     <Container fluid>
@@ -43,7 +71,7 @@ const ViewMaterial = () => {
           {/* Header */}
           <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-white">
             <div>
-              <strong>Welcome back, Alex Kim!</strong>
+              <strong>Welcome back, {user?.name || 'User'}!</strong>
             </div>
             <div>
               <FaBell className="me-2" />

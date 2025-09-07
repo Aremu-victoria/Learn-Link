@@ -11,6 +11,12 @@ const DashboardPage = () => {
 
 const [user, setUser] = useState(null);
 const [materials, setMaterials] = useState([]);
+const [statistics, setStatistics] = useState({
+  materialsUploaded: 0,
+  newThisWeek: 0,
+  totalDownloads: 0,
+  activeStudents: 0
+});
 const token = localStorage.getItem("token");
 const navigate = useNavigate(); 
 
@@ -31,7 +37,17 @@ useEffect(() => {
         },
       });
       
-      setMaterials(dashboardResponse.data.materials);
+      // Update state with dashboard data
+      if (dashboardResponse.data.user) {
+        setUser(dashboardResponse.data.user);
+      }
+      setMaterials(dashboardResponse.data.materials || []);
+      setStatistics(dashboardResponse.data.statistics || {
+        materialsUploaded: 0,
+        newThisWeek: 0,
+        totalDownloads: 0,
+        activeStudents: 0
+      });
     } catch (error) {
       if (error.response && error.response.status === 401) {
         localStorage.removeItem("token");
@@ -70,7 +86,7 @@ useEffect(() => {
           {/* Header */}
           <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-white">
             <div>
-              <strong>Welcome back, Alex Kim!</strong>
+              <strong>Welcome back, {user?.name || 'User'}!</strong>
             </div>
             <div>
               <FaBell className="me-2" />
@@ -85,10 +101,10 @@ useEffect(() => {
             {/* Stats Cards */}
             <Row className="mb-4">
               {[
-                { title: "Materials Uploaded", value: 25 },
-                { title: "New This Week", value: 5 },
-                { title: "Total Downloads", value: 87 },
-                { title: "Active Students", value: 12 },
+                { title: "Materials Uploaded", value: statistics.materialsUploaded },
+                { title: "New This Week", value: statistics.newThisWeek },
+                { title: "Total Downloads", value: statistics.totalDownloads },
+                { title: "Active Students", value: statistics.activeStudents },
               ].map((stat, idx) => (
                 <Col key={idx} md={3} sm={6} xs={12} className="mb-3">
                   <Card className="shadow-sm">
