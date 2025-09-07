@@ -31,7 +31,7 @@ useEffect(() => {
       });
       
       setUser(verifyResponse.data.user);
-      const dashboardResponse = await axios.get("http://localhost:4000/dashboard", {
+      const dashboardResponse = await axios.get("https://learn-link-1.onrender/dashboard", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
