@@ -13,6 +13,7 @@ const bcrypt = require('bcryptjs');
 // Models
 const accounts = require('./models/UsersModel');
 const Material = require('./models/MaterialModel');
+const Notification = require('./models/NotificationModel');
 
 // Constants
 const port = process.env.port || 5000;
@@ -40,7 +41,12 @@ app.get('/', (req, res) => {
 app.post('/signup', async (req, res) => {
   const { name, email, password } = req.body;
   try {
-    const newUser = new accounts({ name, email, password });
+    const existing = await accounts.findOne({ email });
+    if (existing) {
+      return res.status(409).json({ message: 'Email already in use' });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new accounts({ name, email, password: hashedPassword });
     await newUser.save();
     res.status(200).json({ message: 'User created successfully' });
   } catch (error) {
@@ -51,10 +57,15 @@ app.post('/signup', async (req, res) => {
 
 // Sign In
 app.post('/signin', async (req, res) => {
-  const { email } = req.body;
+  const { email, password } = req.body;
   try {
     const user = await accounts.findOne({ email });
     if (!user) {
+      return res.status(401).json({ message: 'Invalid email or password', status: 401 });
+    }
+    // Compare password (supports both hashed and legacy plaintext once)
+    const isMatch = await bcrypt.compare(password, user.password) || password === user.password;
+    if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password', status: 401 });
     }
     const token = jwt.sign(
@@ -74,7 +85,7 @@ app.post('/signin', async (req, res) => {
       user: userData
     });
   } catch (error) {
-    console.error('Login error:', error   );
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Error logging in', status: 500 });
   }
 });
@@ -169,6 +180,17 @@ app.post('/upload-material', upload.single('file'), async (req, res) => {
       userId: decoded.id
     });
     await newMaterial.save();
+    // Create upload-success notification for the user
+    try {
+      await Notification.create({
+        userId: decoded.id,
+        title: 'Upload successful',
+        message: `Your material "${title}" was uploaded successfully`,
+        type: 'upload_success'
+      });
+    } catch (notifyErr) {
+      console.error('Failed to create notification:', notifyErr);
+    }
     res.status(200).json({
       message: 'Material uploaded successfully!',
       file: fileUrl,
@@ -267,6 +289,55 @@ app.get('/dashboard', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ================= NOTIFICATIONS =================
+// Get current user's notifications
+app.get('/notifications', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    const decoded = jwt.verify(token, secret);
+    const items = await Notification.find({ userId: decoded.id }).sort({ createdAt: -1 });
+    res.json(items);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching notifications' });
+  }
+});
+
+// Mark a notification as read
+app.patch('/notifications/:id/read', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    const decoded = jwt.verify(token, secret);
+    const { id } = req.params;
+    const updated = await Notification.findOneAndUpdate(
+      { _id: id, userId: decoded.id },
+      { $set: { isRead: true } },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: 'Notification not found' });
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error updating notification' });
+  }
+});
+
+// Mark all notifications as read
+app.patch('/notifications/read-all', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    const decoded = jwt.verify(token, secret);
+    await Notification.updateMany({ userId: decoded.id, isRead: false }, { $set: { isRead: true } });
+    res.json({ message: 'All notifications marked as read' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error updating notifications' });
   }
 });
 

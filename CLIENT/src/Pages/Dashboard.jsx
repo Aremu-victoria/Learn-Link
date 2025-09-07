@@ -99,7 +99,10 @@ useEffect(() => {
           {/* Header */}
           <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-white">
             <div>
-              <strong>Welcome back, {user?.name || ''}</strong>
+              <strong>
+                {((statistics?.materialsUploaded || 0) === 0 ? 'Welcome, ' : 'Welcome back, ')}
+                {user?.name || ''}
+              </strong>
             </div>
             <div>
               <FaBell className="me-2" />

@@ -1,9 +1,10 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Row, Col, Card, Button, Nav,Dropdown } from 'react-bootstrap';
 import { FaBell, FaUpload, FaHome, FaUser, FaSignOutAlt, FaFolderOpen, FaTrash, FaRegEnvelopeOpen } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import DashBoardFooter from '../Components/DashBoardFooter';
+import axios from 'axios';
 
 
 const notifications = [
@@ -24,6 +25,40 @@ const notifications = [
   },
 ];
 const Notice = () => {
+    const [user, setUser] = useState(null);
+    const [items, setItems] = useState([]);
+    const navigate = useNavigate();
+    const token = localStorage.getItem('token');
+
+    useEffect(() => {
+      const hydrate = async () => {
+        try {
+          const cached = localStorage.getItem('user');
+          if (cached) setUser(JSON.parse(cached));
+          if (!token) { navigate('/signin'); return; }
+          const res = await axios.get('https://learn-link-1.onrender.com/verify', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.data?.user) {
+            setUser(res.data.user);
+            localStorage.setItem('user', JSON.stringify(res.data.user));
+          }
+          // Placeholder: fetch user notifications when backend is ready
+          setItems(notifications);
+        } catch {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          navigate('/signin');
+        }
+      };
+      hydrate();
+    }, [token, navigate]);
+
+    const handleLogout = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      navigate('/signin');
+    };
     const [formData, setFormData] = useState({
         title: '',
         subject: '',
@@ -56,7 +91,7 @@ const Notice = () => {
                                 <Link to='/viewMaterial' className='text-white' style={{textDecoration:'none'}}> <FaFolderOpen className="me-2" />View Materials</Link>
                                 <Link to='/profile' className='text-white' style={{textDecoration:'none'}}> <FaUser className="me-2" />My Profile</Link>
                                 <Link to='/notification' className='text-white' style={{textDecoration:'none'}}><FaBell className="me-2" />Notifications</Link>
-                                    <Nav.Link className="text-white"><FaSignOutAlt className="me-2" />Logout</Nav.Link>
+                                    <Nav.Link onClick={handleLogout} className="text-white" role="button"><FaSignOutAlt className="me-2" />Logout</Nav.Link>
                                 </Nav>
             </Col>
 
@@ -65,7 +100,7 @@ const Notice = () => {
           {/* Header */}
           <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-white">
             <div>
-              <strong>Welcome back, Alex Kim!</strong>
+              <strong>Welcome back, {user?.name || ''}</strong>
             </div>
             <div>
               <FaBell className="me-2" />
@@ -87,7 +122,7 @@ const Notice = () => {
         </Button>
       </div>
 
-      {notifications.map((item, index) => (
+      {items.map((item, index) => (
         <Card key={index} className="mb-2 p-3 shadow-sm">
           <div className="d-flex justify-content-between align-items-start">
             <div>

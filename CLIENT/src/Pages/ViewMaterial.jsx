@@ -13,7 +13,7 @@ const ViewMaterial = () => {
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
-  // Base URL: adjust to your deployment or local server
+  // Base URL of deployed API
   const BASE_URL = 'https://learn-link-1.onrender.com';
 
   useEffect(() => {
@@ -33,9 +33,11 @@ const ViewMaterial = () => {
         });
         setUser(userResponse.data.user);
 
-        // Fetch materials
-        const materialsResponse = await axios.get(`${BASE_URL}/materials`);
-        setMaterials(materialsResponse.data);
+        // Fetch ONLY this user's materials via /dashboard
+        const dashboardResponse = await axios.get(`${BASE_URL}/dashboard`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setMaterials(dashboardResponse.data?.materials || []);
         setLoading(false);
       } catch (error) {
         if (error.response && error.response.status === 401) {

@@ -1,17 +1,55 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Row, Col, Card, Button, Nav,Form } from 'react-bootstrap';
 import { FaBell, FaUpload, FaHome, FaUser, FaSignOutAlt, FaFolderOpen,FaCloudUploadAlt, FaUserEdit } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import DashBoardFooter from '../Components/DashBoardFooter';
+import axios from 'axios';
 
 const Profile = () => {
+    const [user, setUser] = useState(null);
+    const navigate = useNavigate();
+    const token = localStorage.getItem('token');
+
     const [formData, setFormData] = useState({
         title: '',
         subject: '',
         description: '',
         file: null
       });
+
+      useEffect(() => {
+        const hydrate = async () => {
+          try {
+            const cached = localStorage.getItem('user');
+            if (cached) {
+              setUser(JSON.parse(cached));
+            }
+            if (!token) {
+              navigate('/signin');
+              return;
+            }
+            const res = await axios.get('https://learn-link-1.onrender.com/verify', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data?.user) {
+              setUser(res.data.user);
+              localStorage.setItem('user', JSON.stringify(res.data.user));
+            }
+          } catch (e) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            navigate('/signin');
+          }
+        };
+        hydrate();
+      }, [token, navigate]);
+
+      const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/signin');
+      };
     
       const handleChange = (e) => {
         const { name, value, files } = e.target;
@@ -39,7 +77,7 @@ const Profile = () => {
                                 <Link to='/viewMaterial' className='text-white' style={{textDecoration:'none'}}> <FaFolderOpen className="me-2" />View Materials</Link>
                                 <Link to='/profile' className='text-white' style={{textDecoration:'none'}}> <FaUser className="me-2" />My Profile</Link>
                                 <Link to='/notification' className='text-white' style={{textDecoration:'none'}}><FaBell className="me-2" />Notifications</Link>
-                                    <Nav.Link className="text-white"><FaSignOutAlt className="me-2" />Logout</Nav.Link>
+                                    <Nav.Link onClick={handleLogout} className="text-white" role="button"><FaSignOutAlt className="me-2" />Logout</Nav.Link>
                                 </Nav>
             </Col>
 
@@ -48,7 +86,7 @@ const Profile = () => {
           {/* Header */}
           <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-white">
             <div>
-              <strong>Welcome back, Alex Kim!</strong>
+              <strong>Welcome back, {user?.name || ''}</strong>
             </div>
             <div>
               <FaBell className="me-2" />
@@ -77,7 +115,7 @@ const Profile = () => {
                   style={{ fontSize: "1.2rem" }}
                 />
               </div>
-              <h5>Alex Kim</h5>
+              <h5>{user?.name || ''}</h5>
               <p className="text-muted">Teacher</p>
               <Button variant="dark" className="mb-3">
                 Uploaded Materials: 25
@@ -108,13 +146,13 @@ const Profile = () => {
                 <Col md={6}>
                   <Form.Group controlId="formName">
                     <Form.Label>Name</Form.Label>
-                    <Form.Control type="text" defaultValue="Alex Kim" />
+                    <Form.Control type="text" defaultValue={user?.name || ''} />
                   </Form.Group>
                 </Col>
                 <Col md={6}>
                   <Form.Group controlId="formEmail">
                     <Form.Label>Email</Form.Label>
-                    <Form.Control type="email" defaultValue="alex.kim@email.com" />
+                    <Form.Control type="email" defaultValue={user?.email || ''} readOnly />
                   </Form.Group>
                 </Col>
               </Row>
