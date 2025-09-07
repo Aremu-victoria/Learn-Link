@@ -70,7 +70,7 @@ const UploadMaterials = () => {
 
     try {
       const res = await axios.post(
-        'http://localhost:4000/upload-material',
+        'https://learn-link-1.onrender.com/upload-material',
         formData,
         {
           headers: {
