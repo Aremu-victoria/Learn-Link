@@ -20,6 +20,19 @@ const [statistics, setStatistics] = useState({
 const token = localStorage.getItem("token");
 const navigate = useNavigate(); 
 
+// Show the real name instantly from localStorage (before API responds)
+useEffect(() => {
+  try {
+    const cachedUser = localStorage.getItem('user');
+    if (cachedUser) {
+      const parsed = JSON.parse(cachedUser);
+      if (parsed && parsed.name) {
+        setUser(parsed);
+      }
+    }
+  } catch {}
+}, []);
+
 useEffect(() => {
   const fetchData = async () => {
     try {
@@ -31,7 +44,7 @@ useEffect(() => {
       });
       
       setUser(verifyResponse.data.user);
-      const dashboardResponse = await axios.get("https://learn-link-1.onrender/dashboard", {
+      const dashboardResponse = await axios.get("https://learn-link-1.onrender.com/dashboard", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -86,7 +99,7 @@ useEffect(() => {
           {/* Header */}
           <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-white">
             <div>
-              <strong>Welcome back, {user?.name || 'User'}!</strong>
+              <strong>Welcome back, {user?.name || ''}</strong>
             </div>
             <div>
               <FaBell className="me-2" />

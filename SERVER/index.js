@@ -58,7 +58,7 @@ app.post('/signin', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password', status: 401 });
     }
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      { id: user._id, email: user.email, name: user.name },
       secret,
       { expiresIn: '1h' }
     );
