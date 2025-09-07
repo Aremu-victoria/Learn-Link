@@ -341,6 +341,96 @@ app.patch('/notifications/read-all', async (req, res) => {
   }
 });
 
+// ============ PROFILE ROUTES ============
+// Get current user profile and basic stats
+app.get('/me', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    const decoded = jwt.verify(token, secret);
+    const user = await accounts.findById(decoded.id).select('_id name email avatar');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    const totalMaterials = await Material.countDocuments({ userId: decoded.id });
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar || null,
+      stats: { totalMaterials }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching profile' });
+  }
+});
+
+// Update name
+app.patch('/me', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    const decoded = jwt.verify(token, secret);
+    const { name } = req.body;
+    const updated = await accounts.findByIdAndUpdate(
+      decoded.id,
+      { $set: { name } },
+      { new: true, select: '_id name email avatar' }
+    );
+    if (!updated) return res.status(404).json({ message: 'User not found' });
+    res.json({ id: updated._id, name: updated.name, email: updated.email, avatar: updated.avatar || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error updating profile' });
+  }
+});
+
+// Change password
+app.patch('/me/password', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    const decoded = jwt.verify(token, secret);
+    const { currentPassword, newPassword } = req.body;
+    const user = await accounts.findById(decoded.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    const ok = await bcrypt.compare(currentPassword, user.password) || currentPassword === user.password;
+    if (!ok) return res.status(400).json({ message: 'Current password incorrect' });
+    const hashed = await bcrypt.hash(newPassword, 10);
+    user.password = hashed;
+    await user.save();
+    res.json({ message: 'Password updated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error updating password' });
+  }
+});
+
+// Upload avatar
+const avatarUpload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
+
+app.post('/me/avatar', avatarUpload.single('avatar'), async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    const decoded = jwt.verify(token, secret);
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+    const fileUrl = `/uploads/${req.file.filename}`;
+    const updated = await accounts.findByIdAndUpdate(
+      decoded.id,
+      { $set: { avatar: fileUrl } },
+      { new: true, select: '_id name email avatar' }
+    );
+    if (!updated) return res.status(404).json({ message: 'User not found' });
+    res.json({ id: updated._id, name: updated.name, email: updated.email, avatar: updated.avatar });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error uploading avatar' });
+  }
+});
 // ============ START SERVER ============
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

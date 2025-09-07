@@ -106,7 +106,6 @@ useEffect(() => {
             </div>
             <div>
               <FaBell className="me-2" />
-              <span className="badge bg-secondary">Role: Teacher</span>
             </div>
           </div>
 

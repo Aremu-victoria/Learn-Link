@@ -11,12 +11,12 @@ const Profile = () => {
     const navigate = useNavigate();
     const token = localStorage.getItem('token');
 
-    const [formData, setFormData] = useState({
-        title: '',
-        subject: '',
-        description: '',
-        file: null
-      });
+    const [nameInput, setNameInput] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const [message, setMessage] = useState('');
 
       useEffect(() => {
         const hydrate = async () => {
@@ -34,6 +34,7 @@ const Profile = () => {
             });
             if (res.data?.user) {
               setUser(res.data.user);
+              setNameInput(res.data.user.name || '');
               localStorage.setItem('user', JSON.stringify(res.data.user));
             }
           } catch (e) {
@@ -51,19 +52,60 @@ const Profile = () => {
         navigate('/signin');
       };
     
-      const handleChange = (e) => {
-        const { name, value, files } = e.target;
-        setFormData(prev => ({
-          ...prev,
-          [name]: files ? files[0] : value
-        }));
-      };
-    
-      const handleSubmit = (e) => {
+      const handleSave = async (e) => {
         e.preventDefault();
-        // Handle form submission here
-        console.log(formData);
-        alert('Material uploaded successfully!');
+        setMessage('');
+        setSaving(true);
+        try {
+          // Update name if changed
+          if (nameInput && nameInput !== user?.name) {
+            const res = await axios.patch('https://learn-link-1.onrender.com/me', { name: nameInput }, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            setUser(res.data);
+            localStorage.setItem('user', JSON.stringify(res.data));
+          }
+          // Change password if provided
+          if (newPassword || confirmPassword) {
+            if (newPassword !== confirmPassword) {
+              setMessage('Passwords do not match');
+              setSaving(false);
+              return;
+            }
+            await axios.patch('https://learn-link-1.onrender.com/me/password', {
+              currentPassword: '',
+              newPassword
+            }, { headers: { Authorization: `Bearer ${token}` } });
+          }
+          setMessage('Profile saved');
+          setNewPassword('');
+          setConfirmPassword('');
+        } catch (err) {
+          setMessage(err.response?.data?.message || 'Failed to save changes');
+        } finally {
+          setSaving(false);
+        }
+      };
+
+      const handleAvatarUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setAvatarUploading(true);
+        setMessage('');
+        try {
+          const fd = new FormData();
+          fd.append('avatar', file);
+          const res = await axios.post('https://learn-link-1.onrender.com/me/avatar', fd, {
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+          });
+          setUser(res.data);
+          localStorage.setItem('user', JSON.stringify(res.data));
+          setMessage('Avatar updated');
+        } catch (err) {
+          setMessage(err.response?.data?.message || 'Avatar upload failed');
+        } finally {
+          setAvatarUploading(false);
+        }
       };
   return (
     <Container fluid>
@@ -90,7 +132,6 @@ const Profile = () => {
             </div>
             <div>
               <FaBell className="me-2" />
-              <span className="badge bg-secondary">Role: Teacher</span>
             </div>
           </div>
 
@@ -104,7 +145,7 @@ const Profile = () => {
             <div className="d-flex flex-column align-items-center">
               <div className="position-relative mb-3">
                 <img
-                  src="https://i.imgur.com/0y0y0y0.png"
+                  src={user?.avatar ? `https://learn-link-1.onrender.com${user.avatar}` : 'https://i.imgur.com/0y0y0y0.png'}
                   alt="profile"
                   className="rounded-circle"
                   width="100"
@@ -146,7 +187,7 @@ const Profile = () => {
                 <Col md={6}>
                   <Form.Group controlId="formName">
                     <Form.Label>Name</Form.Label>
-                    <Form.Control type="text" defaultValue={user?.name || ''} />
+                    <Form.Control type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value)} />
                   </Form.Group>
                 </Col>
                 <Col md={6}>
@@ -161,13 +202,13 @@ const Profile = () => {
                 <Col md={6}>
                   <Form.Group controlId="formPassword">
                     <Form.Label>Password</Form.Label>
-                    <Form.Control type="password" placeholder="New password" />
+                    <Form.Control type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                   </Form.Group>
                 </Col>
                 <Col md={6}>
                   <Form.Group controlId="formConfirmPassword">
                     <Form.Label>Confirm Password</Form.Label>
-                    <Form.Control type="password" placeholder="Confirm new password" />
+                    <Form.Control type="password" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                   </Form.Group>
                 </Col>
               </Row>
@@ -176,21 +217,24 @@ const Profile = () => {
                 <Form.Label>Profile Picture</Form.Label>
                 <div className="d-flex align-items-center gap-3">
                   <img
-                    src="https://i.imgur.com/0y0y0y0.png"
+                    src={user?.avatar ? `https://learn-link-1.onrender.com${user.avatar}` : 'https://i.imgur.com/0y0y0y0.png'}
                     alt="profile"
                     className="rounded-circle"
                     width="40"
                     height="40"
                   />
-                  <Button variant="light">
+                  <input id="avatarInput" type="file" accept="image/*" hidden onChange={handleAvatarUpload} />
+                  <Button variant="light" disabled={avatarUploading} onClick={() => document.getElementById('avatarInput').click()}>
                     <FaCloudUploadAlt className="me-1" />
-                    Upload
+                    {avatarUploading ? 'Uploading...' : 'Upload'}
                   </Button>
                 </div>
               </Form.Group>
 
-              <Button variant="dark" type="submit">
-                Save Changes
+              {message && <div className="alert alert-info py-2">{message}</div>}
+
+              <Button variant="dark" onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Changes'}
               </Button>
             </Form>
           </Card>
