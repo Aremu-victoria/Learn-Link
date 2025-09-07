@@ -118,8 +118,8 @@ useEffect(() => {
               {[
                 { title: "Materials Uploaded", value: statistics.materialsUploaded },
                 { title: "New This Week", value: statistics.newThisWeek },
-                { title: "Total Downloads", value: statistics.totalDownloads },
-                { title: "Active Students", value: statistics.activeStudents },
+                { title: "Storage Used", value: `${statistics.storageUsed} files` },
+                { title: "Account Age", value: `${statistics.accountAge} days` },
               ].map((stat, idx) => (
                 <Col key={idx} md={3} sm={6} xs={12} className="mb-3">
                   <Card className="shadow-sm">
@@ -130,6 +130,39 @@ useEffect(() => {
                   </Card>
                 </Col>
               ))}
+            </Row>
+
+            {/* Additional Info Cards */}
+            <Row className="mb-4">
+              <Col md={6} className="mb-3">
+                <Card className="shadow-sm">
+                  <Card.Body>
+                    <Card.Title className="text-muted" style={{ fontSize: '14px' }}>Most Popular Subject</Card.Title>
+                    <h4 className="text-primary">{statistics.mostPopularSubject || 'None yet'}</h4>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col md={6} className="mb-3">
+                <Card className="shadow-sm">
+                  <Card.Body>
+                    <Card.Title className="text-muted" style={{ fontSize: '14px' }}>Recent Activity</Card.Title>
+                    {statistics.recentActivity && statistics.recentActivity.length > 0 ? (
+                      <div>
+                        {statistics.recentActivity.slice(0, 2).map((activity, idx) => (
+                          <div key={idx} className="small text-muted mb-1">
+                            📄 {activity.title}
+                          </div>
+                        ))}
+                        {statistics.recentActivity.length > 2 && (
+                          <div className="small text-muted">+{statistics.recentActivity.length - 2} more...</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-muted">No uploads yet</div>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Col>
             </Row>
 
             {/* Upload Button */}

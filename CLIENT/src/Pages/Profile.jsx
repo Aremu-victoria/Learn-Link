@@ -8,6 +8,7 @@ import axios from 'axios';
 
 const Profile = () => {
     const [user, setUser] = useState(null);
+    const [stats, setStats] = useState({ totalMaterials: 0 });
     const navigate = useNavigate();
     const token = localStorage.getItem('token');
 
@@ -36,6 +37,13 @@ const Profile = () => {
               setUser(res.data.user);
               setNameInput(res.data.user.name || '');
               localStorage.setItem('user', JSON.stringify(res.data.user));
+            }
+            // Fetch profile stats
+            const profileRes = await axios.get('https://learn-link-1.onrender.com/me', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (profileRes.data?.stats) {
+              setStats(profileRes.data.stats);
             }
           } catch (e) {
             localStorage.removeItem('token');
@@ -159,7 +167,7 @@ const Profile = () => {
               <h5>{user?.name || ''}</h5>
               <p className="text-muted">Teacher</p>
               <Button variant="dark" className="mb-3">
-                Uploaded Materials: 25
+                Uploaded Materials: {stats.totalMaterials}
               </Button>
               <div className="text-start w-100">
                 <p className="mb-1">

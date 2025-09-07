@@ -253,17 +253,27 @@ app.get('/dashboard', async (req, res) => {
           new Date(material.uploadDate) >= oneWeekAgo
         ).length;
 
-        // Get all materials for total downloads (assuming each view is a download)
-        const allMaterials = await Material.find();
-        const totalDownloads = allMaterials.length; // This could be enhanced with actual download tracking
+        // For new users, show zeros until they upload
+        const totalDownloads = totalMaterials; // User's own materials count
+        const activeStudents = totalMaterials > 0 ? 1 : 0; // 1 if user has materials, 0 if not
 
-        // Get active students (users who have uploaded materials in the last 30 days)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const activeUsers = await Material.distinct('userId', {
-          uploadDate: { $gte: thirtyDaysAgo }
+        // Calculate additional stats
+        const recentActivity = userMaterials.slice(0, 3); // Last 3 uploads
+        
+        // Calculate storage used (simplified - count files)
+        const storageUsed = totalMaterials; // Could be enhanced with actual file sizes
+        
+        // Most popular subject
+        const subjectCounts = {};
+        userMaterials.forEach(material => {
+          subjectCounts[material.subject] = (subjectCounts[material.subject] || 0) + 1;
         });
-        const activeStudents = activeUsers.length;
+        const mostPopularSubject = Object.keys(subjectCounts).length > 0 
+          ? Object.keys(subjectCounts).reduce((a, b) => subjectCounts[a] > subjectCounts[b] ? a : b)
+          : 'None';
+        
+        // Account age in days
+        const accountAge = Math.floor((new Date() - new Date(user.createdAt || user._id.getTimestamp())) / (1000 * 60 * 60 * 24));
 
         const dashboardData = {
           user: {
@@ -275,7 +285,11 @@ app.get('/dashboard', async (req, res) => {
             materialsUploaded: totalMaterials,
             newThisWeek: materialsThisWeek,
             totalDownloads: totalDownloads,
-            activeStudents: activeStudents
+            activeStudents: activeStudents,
+            recentActivity: recentActivity,
+            storageUsed: storageUsed,
+            mostPopularSubject: mostPopularSubject,
+            accountAge: accountAge
           },
           materials: userMaterials
         };
