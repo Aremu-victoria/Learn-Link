@@ -165,24 +165,28 @@ const Profile = () => {
                 />
               </div>
               <h5>{user?.name || ''}</h5>
-              <p className="text-muted">Teacher</p>
-              <Button variant="dark" className="mb-3">
-                Uploaded Materials: {stats.totalMaterials}
-              </Button>
-              <div className="text-start w-100">
-                <p className="mb-1">
-                  📄 Uploaded <br />
-                  <small>“Math Quiz - Week 3”</small>
-                </p>
-                <p className="mb-1">
-                  📄 Uploaded <br />
-                  <small>“Science Notes - Plants”</small>
-                </p>
-                <p className="mb-1">
-                  ✏️ Edited <br />
-                  <small>“Essay Writing Guide”</small>
-                </p>
-              </div>
+              {user?.role === 'teacher' && (
+                <>
+                  <p className="text-muted">Teacher</p>
+                  <Button variant="dark" className="mb-3">
+                    Uploaded Materials: {stats.totalMaterials}
+                  </Button>
+                  <div className="text-start w-100">
+                    <p className="mb-1">
+                      📄 Uploaded <br />
+                      <small>“Math Quiz - Week 3”</small>
+                    </p>
+                    <p className="mb-1">
+                      📄 Uploaded <br />
+                      <small>“Science Notes - Plants”</small>
+                    </p>
+                    <p className="mb-1">
+                      ✏️ Edited <br />
+                      <small>“Essay Writing Guide”</small>
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </Card>
         </Col>
