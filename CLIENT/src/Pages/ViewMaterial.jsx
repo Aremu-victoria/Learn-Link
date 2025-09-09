@@ -91,7 +91,9 @@ const ViewMaterial = () => {
             )}
             <Link to='/viewMaterial' className='text-white' style={{ textDecoration: 'none' }}> <FaFolderOpen className="me-2" />{userRole === 'teacher' ? 'My Materials' : 'View Materials'}</Link>
             <Link to='/profile' className='text-white' style={{ textDecoration: 'none' }}> <FaUser className="me-2" />My Profile</Link>
-            <Link to='/notification' className='text-white' style={{ textDecoration: 'none' }}><FaBell className="me-2" />Notifications</Link>
+            {userRole === 'teacher' && (
+              <Link to='/notification' className='text-white' style={{ textDecoration: 'none' }}><FaBell className="me-2" />Notifications</Link>
+            )}
             <Nav.Link className="text-white" onClick={() => {
               localStorage.removeItem('token');
               localStorage.removeItem('user');
