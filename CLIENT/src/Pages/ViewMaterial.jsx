@@ -177,7 +177,7 @@ const ViewMaterial = () => {
                                       size="sm"
                                       variant="dark"
                                       as="a"
-                                      href={`${BASE_URL}${item.fileUrl}`}
+                                      href={`${BASE_URL}${item.fileUrl.replace(/\/upload\b/, '/uploads')}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
@@ -187,7 +187,7 @@ const ViewMaterial = () => {
                                       size="sm"
                                       variant="outline-dark"
                                       as="a"
-                                      href={`${BASE_URL}${item.fileUrl}`}
+                                      href={`${BASE_URL}${item.fileUrl.replace(/\/upload\b/, '/uploads')}`}
                                       download
                                     >
                                       <FaDownload />

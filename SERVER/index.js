@@ -114,7 +114,7 @@ app.get('/verify', async (req, res) => {
 
 // ============ MULTER CONFIGURATION ============
 
-app.use('/uploads', express.static('uploads')); // To serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // To serve uploaded files reliably
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
