@@ -15,6 +15,8 @@ const UploadMaterials = () => {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState('');
   const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef(null);
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
@@ -42,6 +44,12 @@ const UploadMaterials = () => {
           },
         });
         setUser(response.data.user);
+        
+        // Get user role from localStorage
+        const role = localStorage.getItem('userRole');
+        if (role) {
+          setUserRole(role);
+        }
       } catch (error) {
         if (error.response && error.response.status === 401) {
           localStorage.removeItem("token");
@@ -56,18 +64,17 @@ const UploadMaterials = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
-
+    setIsLoading(true);
     if (!file) {
       setMessage('Please select a file.');
+      setIsLoading(false);
       return;
     }
-
     const formData = new FormData();
     formData.append('title', form.title);
     formData.append('subject', form.subject);
     formData.append('description', form.description);
     formData.append('file', file);
-
     try {
       const res = await axios.post(
         'https://learn-link-1.onrender.com/upload-material',
@@ -82,15 +89,15 @@ const UploadMaterials = () => {
       setMessage('Material uploaded successfully!');
       setForm({ title: '', subject: '', description: '' });
       setFile(null);
-
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-
     } catch (err) {
       console.error('Upload error:', err);
       setMessage('Upload failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -99,10 +106,21 @@ const UploadMaterials = () => {
       <Row className="min-vh-100">
         <Col md={2} className="bg-dark text-white p-3">
           <h5 className="mb-4"><FaHome className="me-2" />Learn Link</h5>
+          {userRole && (
+            <div className="mb-3 p-2 bg-primary rounded text-center">
+              <small className="text-white">
+                <strong>{userRole === 'teacher' ? '👨‍🏫 Teacher' : '👨‍🎓 Student'}</strong>
+              </small>
+            </div>
+          )}
           <Nav className="flex-column gap-3">
-            <Link to='/dashboard' className='text-white' style={{ textDecoration: 'none' }}><FaHome className="me-2" />Dashboard</Link>
-            <Link to='/uploadMaterial' className='text-white' style={{ textDecoration: 'none' }}><FaUpload className="me-2" />Upload Materials</Link>
-            <Link to='/viewMaterial' className='text-white' style={{ textDecoration: 'none' }}><FaFolderOpen className="me-2" />View Materials</Link>
+            {userRole === 'teacher' && (
+              <Link to='/dashboard' className='text-white' style={{ textDecoration: 'none' }}><FaHome className="me-2" />Dashboard</Link>
+            )}
+            {userRole === 'teacher' && (
+              <Link to='/uploadMaterial' className='text-white' style={{ textDecoration: 'none' }}><FaUpload className="me-2" />Upload Materials</Link>
+            )}
+            <Link to='/viewMaterial' className='text-white' style={{ textDecoration: 'none' }}><FaFolderOpen className="me-2" />{userRole === 'teacher' ? 'My Materials' : 'View Materials'}</Link>
             <Link to='/profile' className='text-white' style={{ textDecoration: 'none' }}><FaUser className="me-2" />My Profile</Link>
             <Link to='/notification' className='text-white' style={{ textDecoration: 'none' }}><FaBell className="me-2" />Notifications</Link>
             <Nav.Link className="text-white"><FaSignOutAlt className="me-2" />Logout</Nav.Link>
@@ -113,6 +131,11 @@ const UploadMaterials = () => {
           <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-white">
             <div>
               <strong>Welcome back, {user?.name || 'User'}!</strong>
+              {userRole && (
+                <span className="ms-2 badge bg-primary">
+                  {userRole === 'teacher' ? '👨‍🏫 Teacher' : '👨‍🎓 Student'}
+                </span>
+              )}
             </div>
             <div>
               <FaBell className="me-2" />
@@ -121,6 +144,11 @@ const UploadMaterials = () => {
 
           <div className="px-4 py-3">
             <h5>Upload Materials</h5>
+            {userRole === 'student' && (
+              <div className="alert alert-warning">
+                <strong>Access Denied:</strong> Only teachers can upload materials. Students can only view materials shared by teachers.
+              </div>
+            )}
 
             <div className="container mt-5">
               <div className="row justify-content-center">
@@ -138,78 +166,86 @@ const UploadMaterials = () => {
                         </div>
                       )}
 
-                      <form onSubmit={handleSubmit}>
-                        <div className="mb-3">
-                          <label htmlFor="title" className="form-label fw-bold">Title</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            id="title"
-                            name="title"
-                            placeholder="Enter material title"
-                            value={form.title}
-                            onChange={handleChange}
-                            required
-                          />
-                        </div>
-
-                        <div className="mb-3">
-                          <label htmlFor="subject" className="form-label fw-bold">Subject</label>
-                          <select
-                            className="form-select"
-                            id="subject"
-                            name="subject"
-                            value={form.subject}
-                            onChange={handleChange}
-                            required
-                          >
-                            <option value="">Select subject</option>
-                            <option value="Mathematics">Mathematics</option>
-                            <option value="Science">Science</option>
-                            <option value="History">History</option>
-                            <option value="Language">Language</option>
-                            <option value="Arts">Arts</option>
-                          </select>
-                        </div>
-
-                        <div className="mb-3">
-                          <label htmlFor="description" className="form-label fw-bold">Description</label>
-                          <textarea
-                            className="form-control"
-                            id="description"
-                            name="description"
-                            rows="3"
-                            placeholder="Brief description of the material"
-                            value={form.description}
-                            onChange={handleChange}
-                          ></textarea>
-                        </div>
-
-                        <div className="mb-4">
-                          <label htmlFor="file" className="form-label fw-bold">Upload File</label>
-                          <div className="input-group">
+                      {userRole === 'teacher' ? (
+                        <form onSubmit={handleSubmit}>
+                          <div className="mb-3">
+                            <label htmlFor="title" className="form-label fw-bold">Title</label>
                             <input
-                              type="file"
+                              type="text"
                               className="form-control"
-                              id="file"
-                              name="file"
-                              accept=".pdf,.docx,image/*,video/*"
-                              onChange={handleFileChange}
-                              ref={fileInputRef}
+                              id="title"
+                              name="title"
+                              placeholder="Enter material title"
+                              value={form.title}
+                              onChange={handleChange}
                               required
                             />
                           </div>
-                          <div className="form-text">
-                            Accepted: PDF, DOCX, Images, Videos
+                          <div className="mb-3">
+                            <label htmlFor="subject" className="form-label fw-bold">Subject</label>
+                            <select
+                              className="form-select"
+                              id="subject"
+                              name="subject"
+                              value={form.subject}
+                              onChange={handleChange}
+                              required
+                            >
+                              <option value="">Select subject</option>
+                              <option value="Mathematics">Mathematics</option>
+                              <option value="Science">Science</option>
+                              <option value="History">History</option>
+                              <option value="Language">Language</option>
+                              <option value="Arts">Arts</option>
+                            </select>
                           </div>
+                          <div className="mb-3">
+                            <label htmlFor="description" className="form-label fw-bold">Description</label>
+                            <textarea
+                              className="form-control"
+                              id="description"
+                              name="description"
+                              rows="3"
+                              placeholder="Brief description of the material"
+                              value={form.description}
+                              onChange={handleChange}
+                            ></textarea>
+                          </div>
+                          <div className="mb-4">
+                            <label htmlFor="file" className="form-label fw-bold">Upload File</label>
+                            <div className="input-group">
+                              <input
+                                type="file"
+                                className="form-control"
+                                id="file"
+                                name="file"
+                                accept=".pdf,.docx,image/*,video/*"
+                                onChange={handleFileChange}
+                                ref={fileInputRef}
+                                required
+                              />
+                            </div>
+                            <div className="form-text">
+                              Accepted: PDF, DOCX, Images, Videos
+                            </div>
+                          </div>
+                          <div className="d-grid">
+                            <button type="submit" className="btn text-light btn-lg" style={{ backgroundColor: '#212529' }} disabled={isLoading}>
+                              {isLoading ? (
+                                <>
+                                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                  Uploading...
+                                </>
+                              ) : 'Upload Material'}
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="text-center py-5">
+                          <h5 className="text-muted">Upload functionality is only available for teachers</h5>
+                          <p className="text-muted">Students can view materials shared by teachers in the "View Materials" section.</p>
                         </div>
-
-                        <div className="d-grid">
-                          <button type="submit" className="btn text-light btn-lg" style={{ backgroundColor: '#212529' }}>
-                            Upload Material
-                          </button>
-                        </div>
-                      </form>
+                      )}
                     </div>
                   </div>
                 </div>

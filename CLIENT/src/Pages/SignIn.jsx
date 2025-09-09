@@ -39,10 +39,11 @@ const SignIn = () => {
       localStorage.setItem('token', response.data.token);
       if (response.data.user) {
         localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('userRole', response.data.user.role);
       }
 
       // Redirect to dashboard
-      navigate('/dashboard');
+      navigate('/viewMaterial');
     } catch (error) {
       if (error.response) {
 

@@ -10,6 +10,7 @@ import axios from 'axios';
 const DashboardPage = () => {
 
 const [user, setUser] = useState(null);
+const [userRole, setUserRole] = useState(null);
 const [materials, setMaterials] = useState([]);
 const [statistics, setStatistics] = useState({
   materialsUploaded: 0,
@@ -24,11 +25,15 @@ const navigate = useNavigate();
 useEffect(() => {
   try {
     const cachedUser = localStorage.getItem('user');
+    const role = localStorage.getItem('userRole');
     if (cachedUser) {
       const parsed = JSON.parse(cachedUser);
       if (parsed && parsed.name) {
         setUser(parsed);
       }
+    }
+    if (role) {
+      setUserRole(role);
     }
   } catch {}
 }, []);
@@ -84,14 +89,25 @@ useEffect(() => {
         {/* Sidebar */}
         <Col md={2} className="bg-dark text-white p-3">
           <h5 className="mb-4"> <FaHome className="me-2" />Learn Link</h5>
-            <Nav className="flex-column gap-3">
-                    <Link to='/dashboard' className='text-white' style={{textDecoration:'none'}}><FaHome className="me-2" />Dashboard</Link>
-                      <Link to='/uploadMaterial' className='text-white' style={{textDecoration:'none'}}><FaUpload className="me-2" />Upload Materials</Link> 
-                      <Link to='/viewMaterial' className='text-white' style={{textDecoration:'none'}}> <FaFolderOpen className="me-2" />View Materials</Link>
-                      <Link to='/profile' className='text-white' style={{textDecoration:'none'}}> <FaUser className="me-2" />My Profile</Link>
-                      <Link to='/notification' className='text-white' style={{textDecoration:'none'}}><FaBell className="me-2" />Notifications</Link>
-                          <Nav.Link className="text-white"><FaSignOutAlt className="me-2" />Logout</Nav.Link>
-                      </Nav>
+          {userRole && (
+            <div className="mb-3 p-2 bg-primary rounded text-center">
+              <small className="text-white">
+                <strong>{userRole === 'teacher' ? '👨‍🏫 Teacher' : '👨‍🎓 Student'}</strong>
+              </small>
+            </div>
+          )}
+          <Nav className="flex-column gap-3">
+            {userRole === 'teacher' && (
+              <Link to='/dashboard' className='text-white' style={{textDecoration:'none'}}><FaHome className="me-2" />Dashboard</Link>
+            )}
+            {userRole === 'teacher' && (
+              <Link to='/uploadMaterial' className='text-white' style={{textDecoration:'none'}}><FaUpload className="me-2" />Upload Materials</Link>
+            )}
+            <Link to='/viewMaterial' className='text-white' style={{textDecoration:'none'}}> <FaFolderOpen className="me-2" />{userRole === 'teacher' ? 'My Materials' : 'View Materials'}</Link>
+            <Link to='/profile' className='text-white' style={{textDecoration:'none'}}> <FaUser className="me-2" />My Profile</Link>
+            <Link to='/notification' className='text-white' style={{textDecoration:'none'}}><FaBell className="me-2" />Notifications</Link>
+            <Nav.Link className="text-white"><FaSignOutAlt className="me-2" />Logout</Nav.Link>
+          </Nav>
         </Col>
 
         {/* Main Dashboard */}
@@ -103,6 +119,11 @@ useEffect(() => {
                 {((statistics?.materialsUploaded || 0) === 0 ? 'Welcome, ' : 'Welcome back, ')}
                 {user?.name || ''}
               </strong>
+              {userRole && (
+                <span className="ms-2 badge bg-primary">
+                  {userRole === 'teacher' ? '👨‍🏫 Teacher' : '👨‍🎓 Student'}
+                </span>
+              )}
             </div>
             <div>
               <FaBell className="me-2" />
@@ -134,42 +155,44 @@ useEffect(() => {
 
             {/* Additional Info Cards */}
             <Row className="mb-4">
-              <Col md={6} className="mb-3">
-                <Card className="shadow-sm">
-                  <Card.Body>
-                    <Card.Title className="text-muted" style={{ fontSize: '14px' }}>Most Popular Subject</Card.Title>
-                    <h4 className="text-primary">{statistics.mostPopularSubject || 'None yet'}</h4>
-                  </Card.Body>
-                </Card>
-              </Col>
-              <Col md={6} className="mb-3">
-                <Card className="shadow-sm">
-                  <Card.Body>
-                    <Card.Title className="text-muted" style={{ fontSize: '14px' }}>Recent Activity</Card.Title>
-                    {statistics.recentActivity && statistics.recentActivity.length > 0 ? (
-                      <div>
-                        {statistics.recentActivity.slice(0, 2).map((activity, idx) => (
-                          <div key={idx} className="small text-muted mb-1">
-                            📄 {activity.title}
-                          </div>
-                        ))}
-                        {statistics.recentActivity.length > 2 && (
-                          <div className="small text-muted">+{statistics.recentActivity.length - 2} more...</div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-muted">No uploads yet</div>
-                    )}
-                  </Card.Body>
-                </Card>
+              <Col md={12}>
+                <h5 className="mb-3">Materials</h5>
+                <Row>
+                  {materials.length === 0 ? (
+                    <Col><div className="text-muted">No materials found.</div></Col>
+                  ) : (
+                    materials.map((material, idx) => (
+                      <Col key={idx} md={4} sm={6} xs={12} className="mb-3">
+                        <Card className="shadow-sm h-100">
+                          <Card.Body>
+                            <Card.Title>{material.title}</Card.Title>
+                            <div className="mb-2 text-muted" style={{ fontSize: '14px' }}>
+                              Subject: {material.subject}
+                            </div>
+                            <div className="mb-2" style={{ fontSize: '13px' }}>
+                              {material.description}
+                            </div>
+                            <div className="mb-2 text-muted" style={{ fontSize: '13px' }}>
+                              Uploaded: {new Date(material.uploadDate).toLocaleDateString()}
+                            </div>
+                            {userRole === 'student' && (
+                              <div className="mb-2 text-primary" style={{ fontSize: '13px' }}>
+                                Teacher: {material.teacherName || 'Unknown'}
+                              </div>
+                            )}
+                            <a href={material.fileUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary btn-sm mt-2">
+                              <FaDownload className="me-1" /> Download
+                            </a>
+                          </Card.Body>
+                        </Card>
+                      </Col>
+                    ))
+                  )}
+                </Row>
               </Col>
             </Row>
 
-            {/* Upload Button */}
-            <div className="text-end mb-3">
-              <Button variant="dark"><FaUpload className="me-1" /> Upload Material</Button>
-            </div>
-
+            
         
           </div>
 

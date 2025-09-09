@@ -39,14 +39,15 @@ app.get('/', (req, res) => {
 
 // Sign Up
 app.post('/signup', async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, role } = req.body;
   try {
     const existing = await accounts.findOne({ email });
     if (existing) {
       return res.status(409).json({ message: 'Email already in use' });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new accounts({ name, email, password: hashedPassword });
+    // const newUser = new accounts({ name, email, password: hashedPassword });
+    const newUser = new accounts({ name, email, password: hashedPassword, role });
     await newUser.save();
     res.status(200).json({ message: 'User created successfully' });
   } catch (error) {
@@ -77,7 +78,9 @@ app.post('/signin', async (req, res) => {
       id: user._id,
       email: user.email,
       name: user.name
-    };
+        ,
+        role: user.role
+      };
     res.status(200).json({
       message: 'Login successful',
       status: 200,
@@ -236,65 +239,63 @@ app.get('/dashboard', async (req, res) => {
         
         // Get user info
         const user = await accounts.findById(userId);
-        if (!user) {
-          return res.status(404).json({ message: 'User not found' });
+        let materials = [];
+        let statistics = {};
+        if (user.role === 'teacher') {
+          // Teacher: show only their own materials
+          materials = await Material.find({ userId }).sort({ uploadDate: -1 });
+        } else {
+          // Student: show all materials uploaded by teachers, with teacher name
+          const teacherUsers = await accounts.find({ role: 'teacher' });
+          const teacherIds = teacherUsers.map(t => t._id);
+          materials = await Material.find({ userId: { $in: teacherIds } }).sort({ uploadDate: -1 }).lean();
+          // Attach teacher name to each material
+          const teacherMap = {};
+          teacherUsers.forEach(t => { teacherMap[t._id] = t.name; });
+          materials.forEach(mat => { mat.teacherName = teacherMap[mat.userId] || 'Unknown'; });
         }
 
-        // Get user's materials
-        const userMaterials = await Material.find({ userId }).sort({ uploadDate: -1 });
-        
         // Calculate statistics
-        const totalMaterials = userMaterials.length;
-        
-        // Calculate materials uploaded this week
+        const totalMaterials = materials.length;
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        const materialsThisWeek = userMaterials.filter(material => 
-          new Date(material.uploadDate) >= oneWeekAgo
-        ).length;
-
-        // For new users, show zeros until they upload
-        const totalDownloads = totalMaterials; // User's own materials count
-        const activeStudents = totalMaterials > 0 ? 1 : 0; // 1 if user has materials, 0 if not
-
-        // Calculate additional stats
-        const recentActivity = userMaterials.slice(0, 3); // Last 3 uploads
-        
-        // Calculate storage used (simplified - count files)
-        const storageUsed = totalMaterials; // Could be enhanced with actual file sizes
-        
-        // Most popular subject
+        const materialsThisWeek = materials.filter(material => new Date(material.uploadDate) >= oneWeekAgo).length;
+        const totalDownloads = totalMaterials;
+        const activeStudents = totalMaterials > 0 ? 1 : 0;
+        const recentActivity = materials.slice(0, 3);
+        const storageUsed = totalMaterials;
         const subjectCounts = {};
-        userMaterials.forEach(material => {
+        materials.forEach(material => {
           subjectCounts[material.subject] = (subjectCounts[material.subject] || 0) + 1;
         });
         const mostPopularSubject = Object.keys(subjectCounts).length > 0 
           ? Object.keys(subjectCounts).reduce((a, b) => subjectCounts[a] > subjectCounts[b] ? a : b)
           : 'None';
-        
-        // Account age in days
         const accountAge = Math.floor((new Date() - new Date(user.createdAt || user._id.getTimestamp())) / (1000 * 60 * 60 * 24));
+
+        statistics = {
+          materialsUploaded: totalMaterials,
+          newThisWeek: materialsThisWeek,
+          totalDownloads: totalDownloads,
+          activeStudents: activeStudents,
+          recentActivity: recentActivity,
+          storageUsed: storageUsed,
+          mostPopularSubject: mostPopularSubject,
+          accountAge: accountAge
+        };
 
         const dashboardData = {
           user: {
             id: user._id,
             name: user.name,
-            email: user.email
+            email: user.email,
+            role: user.role
           },
-          statistics: {
-            materialsUploaded: totalMaterials,
-            newThisWeek: materialsThisWeek,
-            totalDownloads: totalDownloads,
-            activeStudents: activeStudents,
-            recentActivity: recentActivity,
-            storageUsed: storageUsed,
-            mostPopularSubject: mostPopularSubject,
-            accountAge: accountAge
-          },
-          materials: userMaterials
+          statistics,
+          materials
         };
 
-        res.status(200).json(dashboardData);
+  res.status(200).json(dashboardData);
       } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error fetching dashboard' });

@@ -8,6 +8,8 @@ import UploadMaterials from './Pages/UploadMaterials'
 import Notice from './Pages/Notice'
 import Profile from './Pages/Profile'
 import ViewMaterial from './Pages/ViewMaterial'
+import AboutUs from './Pages/About'
+import Contact from './Pages/Contact'
 
 const App = () => {
   return (
@@ -22,6 +24,8 @@ const App = () => {
           <Route path='/notification' element={<Notice/>} />
           <Route path='/profile' element={<Profile/>} />
           <Route path='/viewMaterial' element={<ViewMaterial/>} />
+          <Route path='/about' element={<AboutUs/>} />
+          <Route path='/contact' element={<Contact/>} />
         </Routes>
     </>
   )

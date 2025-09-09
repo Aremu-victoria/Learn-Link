@@ -15,15 +15,19 @@ const Navbar = () => {
         <li className="nav-item">
           <a className="nav-link active" aria-current="page" href="#">Home</a>
         </li>
+        <Link to='/about' className='nav-item text-decoration-none'>
         <li className="nav-item">
           <a className="nav-link active" aria-current="page" href="#">About</a>
         </li>
+        </Link>
         <li className="nav-item">
           <a className="nav-link active" aria-current="page" href="#">Feature</a>
         </li>
+       <Link to='/contact' className='nav-item text-decoration-none'>
         <li className="nav-item">
-          <a className="nav-link" href="#">contact</a>
+          <a className="nav-link active" aria-current="page" href="#">Contact</a>
         </li>
+        </Link>
       </ul>
       <form className="d-flex" role="search">
         {/* <input className="form-control me-2" type="search" placeholder="Search" aria-label="Search"/> */}
