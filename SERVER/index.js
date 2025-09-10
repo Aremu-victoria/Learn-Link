@@ -24,10 +24,14 @@ app.use(express.json());
 app.use(cors());
 
 // Database Connection
+
 mongoose
   .connect(URI)
   .then(() => console.log("Database connected successfully"))
   .catch((err) => console.log("Database connection error:", err));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 app.get('/', (req, res) => {
