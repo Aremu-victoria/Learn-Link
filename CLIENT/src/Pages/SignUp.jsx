@@ -99,11 +99,37 @@ const Register = () => {
                 <input type="password" className="form-control" placeholder="Confirm Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
               </div>
               <div className="mb-3">
-                <label htmlFor="role" className="form-label">Role</label>
-                <select className="form-control" value={role} onChange={e => setRole(e.target.value)}>
-                  <option value="student">Student</option>
-                  <option value="teacher">Teacher</option>
-                </select>
+                <label className="form-label">Role</label>
+                <div className="d-flex gap-3">
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="role"
+                      id="studentRadio"
+                      value="student"
+                      checked={role === 'student'}
+                      onChange={e => setRole(e.target.value)}
+                    />
+                    <label className="form-check-label" htmlFor="studentRadio">
+                      Student
+                    </label>
+                  </div>
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="role"
+                      id="teacherRadio"
+                      value="teacher"
+                      checked={role === 'teacher'}
+                      onChange={e => setRole(e.target.value)}
+                    />
+                    <label className="form-check-label" htmlFor="teacherRadio">
+                      Teacher
+                    </label>
+                  </div>
+                </div>
               </div>
               <button type="submit" className="btn btn-dark w-100" disabled={isLoading}>
                 {isLoading ? (

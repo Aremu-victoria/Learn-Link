@@ -20,7 +20,6 @@ const port = process.env.port || 5000;
 const URI = process.env.uri;
 const secret = process.env.JWT_SECRET || 'your_default_secret_key';
 
-// Middleware
 app.use(express.json());
 app.use(cors());
 
@@ -30,12 +29,12 @@ mongoose
   .then(() => console.log("Database connected successfully"))
   .catch((err) => console.log("Database connection error:", err));
 
-// Root route
+
 app.get('/', (req, res) => {
   res.send('Hello from the server!');
 });
 
-// ============ AUTH ROUTES ============
+
 
 // Sign Up
 app.post('/signup', async (req, res) => {
@@ -112,7 +111,7 @@ app.get('/verify', async (req, res) => {
   }
 });
 
-// ============ MULTER CONFIGURATION ============
+
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // To serve uploaded files reliably
 
@@ -152,7 +151,6 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB max
 });
 
-// ============ MATERIAL ROUTES ============
 
 // Upload Material
 app.post('/upload-material', upload.single('file'), async (req, res) => {
@@ -165,7 +163,7 @@ app.post('/upload-material', upload.single('file'), async (req, res) => {
     return res.status(400).json({ message: 'No file uploaded' });
   }
 
-  // Verify user authentication
+
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) {
     return res.status(401).json({ message: 'Unauthorized' });
@@ -183,7 +181,7 @@ app.post('/upload-material', upload.single('file'), async (req, res) => {
       userId: decoded.id
     });
     await newMaterial.save();
-    // Create upload-success notification for the user
+  
     try {
       await Notification.create({
         userId: decoded.id,
@@ -237,25 +235,24 @@ app.get('/dashboard', async (req, res) => {
       try {
         const userId = decoded.id;
         
-        // Get user info
+
         const user = await accounts.findById(userId);
         let materials = [];
         let statistics = {};
         if (user.role === 'teacher') {
-          // Teacher: show only their own materials
           materials = await Material.find({ userId }).sort({ uploadDate: -1 });
         } else {
-          // Student: show all materials uploaded by teachers, with teacher name
+         
           const teacherUsers = await accounts.find({ role: 'teacher' });
           const teacherIds = teacherUsers.map(t => t._id);
           materials = await Material.find({ userId: { $in: teacherIds } }).sort({ uploadDate: -1 }).lean();
-          // Attach teacher name to each material
+        
           const teacherMap = {};
           teacherUsers.forEach(t => { teacherMap[t._id] = t.name; });
           materials.forEach(mat => { mat.teacherName = teacherMap[mat.userId] || 'Unknown'; });
         }
 
-        // Calculate statistics
+
         const totalMaterials = materials.length;
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -343,6 +340,21 @@ app.patch('/notifications/:id/read', async (req, res) => {
 });
 
 // Mark all notifications as read
+// Delete a notification
+app.delete('/notifications/:id', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    const decoded = jwt.verify(token, secret);
+    const { id } = req.params;
+    const deleted = await Notification.findOneAndDelete({ _id: id, userId: decoded.id });
+    if (!deleted) return res.status(404).json({ message: 'Notification not found' });
+    res.json({ message: 'Notification deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error deleting notification' });
+  }
+});
 app.patch('/notifications/read-all', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];

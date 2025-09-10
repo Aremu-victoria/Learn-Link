@@ -180,7 +180,7 @@ useEffect(() => {
                                 Teacher: {material.teacherName || 'Unknown'}
                               </div>
                             )}
-                            <a href={material.fileUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary btn-sm mt-2">
+                            <a href={material.fileUrl} download className="btn btn-outline-primary btn-sm mt-2">
                               <FaDownload className="me-1" /> Download
                             </a>
                           </Card.Body>

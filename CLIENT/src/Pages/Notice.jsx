@@ -25,8 +25,29 @@ const notifications = [
   },
 ];
 const Notice = () => {
+    const handleMarkAsRead = async (id) => {
+      try {
+        await axios.patch(`https://learn-link-1.onrender.com/notifications/${id}/read`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setItems(prev => prev.map(item => item._id === id ? { ...item, isRead: true } : item));
+      } catch {}
+    };
+
+    const handleDelete = async (id) => {
+      try {
+        await axios.delete(`https://learn-link-1.onrender.com/notifications/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setItems(prev => prev.filter(item => item._id !== id));
+      } catch {}
+    };
     const [user, setUser] = useState(null);
+    const [userRole, setUserRole] = useState(null);
     const [items, setItems] = useState([]);
+    const [skip, setSkip] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const token = localStorage.getItem('token');
 
@@ -34,17 +55,21 @@ const Notice = () => {
       const hydrate = async () => {
         try {
           const cached = localStorage.getItem('user');
-          if (cached) setUser(JSON.parse(cached));
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            setUser(parsed);
+            setUserRole(parsed.role || localStorage.getItem('userRole'));
+          }
           if (!token) { navigate('/signin'); return; }
           const res = await axios.get('https://learn-link-1.onrender.com/verify', {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (res.data?.user) {
             setUser(res.data.user);
+            setUserRole(res.data.user.role);
             localStorage.setItem('user', JSON.stringify(res.data.user));
           }
-          // Placeholder: fetch user notifications when backend is ready
-          setItems(notifications);
+          fetchNotifications(0);
         } catch {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
@@ -52,7 +77,26 @@ const Notice = () => {
         }
       };
       hydrate();
+      // eslint-disable-next-line
     }, [token, navigate]);
+
+    const fetchNotifications = async (newSkip) => {
+      setLoading(true);
+      try {
+        // If backend supports skip/limit, use: `/notifications?skip=${newSkip}&limit=5`
+        const res = await axios.get('https://learn-link-1.onrender.com/notifications', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        // Simulate pagination client-side for now
+        const batch = res.data.slice(newSkip, newSkip + 5);
+        setItems(prev => [...prev, ...batch]);
+        setSkip(newSkip + batch.length);
+        setHasMore(batch.length === 5 && (newSkip + batch.length) < res.data.length);
+      } catch {
+        setHasMore(false);
+      }
+      setLoading(false);
+    };
 
     const handleLogout = () => {
       localStorage.removeItem('token');
@@ -85,15 +129,22 @@ const Notice = () => {
         {/* Sidebar */}
         <Col md={2} className="bg-dark text-white p-3">
           <h5 className="mb-4"> <FaHome className="me-2" />School System</h5>
+          {userRole && (
+            <div className="mb-3 p-2 bg-primary rounded text-center">
+              <small className="text-white">
+                <strong>{userRole === 'teacher' ? '👨‍🏫 Teacher' : '👨‍🎓 Student'}</strong>
+              </small>
+            </div>
+          )}
           <Nav className="flex-column gap-3">
-                              <Link to='/dashboard' className='text-white' style={{textDecoration:'none'}}><FaHome className="me-2" />Dashboard</Link>
-                                <Link to='/uploadMaterial' className='text-white' style={{textDecoration:'none'}}><FaUpload className="me-2" />Upload Materials</Link> 
-                                <Link to='/viewMaterial' className='text-white' style={{textDecoration:'none'}}> <FaFolderOpen className="me-2" />View Materials</Link>
-                <Link to='/profile' className='text-white' style={{textDecoration:'none'}}> <FaUser className="me-2" />My Profile</Link>
-                <Link to='/notification' className='text-white' style={{textDecoration:'none'}}><FaBell className="me-2" />Notifications</Link>
-                  <Nav.Link onClick={handleLogout} className="text-white" role="button"><FaSignOutAlt className="me-2" />Logout</Nav.Link>
-                                </Nav>
-            </Col>
+            <Link to='/dashboard' className='text-white' style={{textDecoration:'none'}}><FaHome className="me-2" />Dashboard</Link>
+            <Link to='/uploadMaterial' className='text-white' style={{textDecoration:'none'}}><FaUpload className="me-2" />Upload Materials</Link>
+            <Link to='/viewMaterial' className='text-white' style={{textDecoration:'none'}}> <FaFolderOpen className="me-2" />View Materials</Link>
+            <Link to='/profile' className='text-white' style={{textDecoration:'none'}}> <FaUser className="me-2" />My Profile</Link>
+            <Link to='/notification' className='text-white' style={{textDecoration:'none'}}><FaBell className="me-2" />Notifications</Link>
+            <Nav.Link onClick={handleLogout} className="text-white" role="button"><FaSignOutAlt className="me-2" />Logout</Nav.Link>
+          </Nav>
+        </Col>
 
         {/* Main Dashboard */}
         <Col md={10} className="bg-light">
@@ -121,24 +172,40 @@ const Notice = () => {
         </Button>
       </div>
 
+      {items.length === 0 && !loading && (
+        <div className="text-muted text-center">No notifications found.</div>
+      )}
       {items.map((item, index) => (
-        <Card key={index} className="mb-2 p-3 shadow-sm">
+        <Card key={index} className={`mb-2 p-3 shadow-sm ${item.isRead ? 'bg-light' : ''}`}>
           <div className="d-flex justify-content-between align-items-start">
             <div>
-              <strong>{item.title}</strong>
-              <p className="mb-1 small">{item.detail}</p>
+              <strong>{item.title || item.message}</strong>
+              <p className="mb-1 small">{item.message || item.detail}</p>
               <span className="text-muted small">{item.type}</span>
             </div>
             <div className="d-flex gap-2">
-              <FaRegEnvelopeOpen className="text-secondary" title="Mark as read" />
-              <FaTrash className="text-danger" title="Delete" />
+              <FaRegEnvelopeOpen
+                className={`text-secondary ${item.isRead ? 'opacity-50' : 'cursor-pointer'}`}
+                title="Mark as read"
+                style={{ cursor: item.isRead ? 'default' : 'pointer' }}
+                onClick={() => !item.isRead && handleMarkAsRead(item._id)}
+              />
+              <FaTrash
+                className="text-danger cursor-pointer"
+                title="Delete"
+                style={{ cursor: 'pointer' }}
+                onClick={() => handleDelete(item._id)}
+              />
             </div>
           </div>
         </Card>
       ))}
-
       <div className="text-center mt-3">
-        <Button variant="light" size="sm">Load More</Button>
+        {hasMore && (
+          <Button variant="light" size="sm" onClick={() => fetchNotifications(skip)} disabled={loading}>
+            {loading ? 'Loading...' : 'Load More'}
+          </Button>
+        )}
       </div>
     </Card>
 
